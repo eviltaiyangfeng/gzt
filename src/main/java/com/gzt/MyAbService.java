@@ -655,7 +655,12 @@ public class MyAbService extends AccessibilityService {
                 if (node != null && node.getText() != null && node.getText().toString().equals(text)) {
                         while (node != null) {
                             if (node.isClickable()) {
-                                node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                                int left = 0,right= 0,top=0,bottom=0;
+                                Rect rect = new Rect(left,right,top,bottom);
+                                node.getBoundsInScreen(rect);
+                                int tapX = rect.left+(rect.right-rect.left)/2;
+                                int tapY = rect.top+(rect.bottom-rect.top)/2;
+                                ClutterUtils.tap(tapX,tapY);
                                 return true;
                             }
                             node = node.getParent();
