@@ -26,15 +26,15 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.gzt.utils.ClutterUtils;
 import com.gzt.utils.NetWorkUtils;
-
-import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -158,13 +158,13 @@ public class MainActivity extends AppCompatActivity {
         try {
             //初始化随机休息时间点
             Calendar sCalendar = Calendar.getInstance();
-            if (initDay != sCalendar.get(Calendar.DATE)) {
-                initDay = sCalendar.get(Calendar.DATE);
+            if (initDay != Calendar.getInstance().get(Calendar.DATE)) {
+                initDay = Calendar.getInstance().get(Calendar.DATE);
                 sleepHours = ClutterUtils.getRandomInt(10,23,ClutterUtils.getRandomInt(0,5));
             }
             //判断当前是否为休息时间点
             int countFlag = 0;
-            while (ClutterUtils.inIntArray(sleepHours,sCalendar.get(Calendar.HOUR_OF_DAY))) {
+            while (ClutterUtils.inIntArray(sleepHours,Calendar.getInstance().get(Calendar.HOUR_OF_DAY))) {
                 countFlag++;
                 Thread.sleep(3000);
                 myPrompt("现在是休息时间"+ countFlag);
@@ -186,20 +186,33 @@ public class MainActivity extends AppCompatActivity {
                 Thread.sleep(1000);
                 myPrompt("等待进入微信主界面");
             }
-            myPrompt("点击"+name);
-            countFlag = 0;
-            while (!MyAbService.clickByText(getApplicationContext(),name)) {
-                countFlag++;
+            while (!MyAbService.findByText_noThrows(getApplicationContext(), "新的朋友")) {
+                myPrompt("等待进入通讯录");
+                MyAbService.clickByText_noThrows(getApplicationContext(),"通讯录");
                 Thread.sleep(1000);
-                myPrompt("查找"+name+ countFlag);
             }
             countFlag = 0;
+            Thread.sleep(1000);
+            while (!MyAbService.clickByText_noThrows(this, name)) {
+                if (countFlag>3) {
+                    countFlag=0;
+                    randSwipe();
+                }
+                countFlag++;
+                myPrompt("点击"+name+countFlag);
+                Thread.sleep(1000);
+            }
+            countFlag = 0;
+            Boolean clickSendMessage = false;
             while (!MyAbService.findByDesc_noThrows(getApplicationContext(),"更多功能按钮，已折叠")) {
                 countFlag++;
+                if (!clickSendMessage) {
+                    if (MyAbService.clickByText_noThrows(getApplicationContext(),"发消息")) {
+                        clickSendMessage = true;
+                    }
+                }
                 myPrompt("等待进入聊天界面"+countFlag);
-                MyAbService.clickByText(getApplicationContext(),"发消息");
-                Thread.sleep(500);
-                MyAbService.clickByText(getApplicationContext(),name);
+                Thread.sleep(1000);
             }
             Thread.sleep(1000);
             String viewId = MyAbService.getFirstViewIdResourceName(getApplicationContext(),"android.widget.EditText");
@@ -222,19 +235,12 @@ public class MainActivity extends AppCompatActivity {
             }
             Thread.sleep(3000);
             myPrompt("点击链接");
-            /*while (!MyAbService.clickChatLink(getApplicationContext(), "task.ls127.com")) {
-                Thread.sleep(1000);
-            }*/
-            while (!MyAbService.clickLastViewIdByClassName(getApplicationContext(),"android.view.View")) {
+            while (!MyAbService.clickChatLinkByclassName(getApplicationContext(),"android.view.View")) {
                 Thread.sleep(1000);
                 myPrompt("正在点击");
             }
-            //myPrompt("访问:" + task_link);
-            //ClutterUtils.weiXinUrl(task_link);
             String taskHint = "";
             if (!loadingWxWeb()) {
-                myPrompt("已停止运行");
-                ClutterUtils.killApp("com.tencent.mm");
             } else {
                 if (MyAbService.findByText(MainActivity.this, "网页由 task.ls127.com 提供")) {
                     if (MyAbService.findByDesc_noThrows(getApplicationContext(),"初次请求成功,请继续.")) {
@@ -275,10 +281,10 @@ public class MainActivity extends AppCompatActivity {
                         myPrompt("网络连接正常");
                     }
                 }
-                myPrompt("返回主界面");
-                backHomePage();
                 browserCount++;
             }
+            myPrompt("返回主界面");
+            backHomePage();
             Thread.sleep(1000);
             ClutterUtils.pressHome();
             if (powerManager.isScreenOn()) {
@@ -304,7 +310,7 @@ public class MainActivity extends AppCompatActivity {
                     sleepCount = 0;
                     countFlag =0;
                     int h = sCalendar.get(Calendar.HOUR_OF_DAY);
-                    while (h == sCalendar.get(Calendar.HOUR_OF_DAY)) {
+                    while (h == Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
                         countFlag++;
                         myPrompt(h+"已达到小时量"+ countFlag);
                         Thread.sleep(3000);
@@ -315,7 +321,7 @@ public class MainActivity extends AppCompatActivity {
                     browserCount = 0;
                     int d = sCalendar.get(Calendar.DATE);
                     countFlag =0;
-                    while (d == sCalendar.get(Calendar.DATE)) {
+                    while (d == Calendar.getInstance().get(Calendar.DATE)) {
                         countFlag++;
                         myPrompt(d+"日任务已完成"+ countFlag);
                         Thread.sleep(3000);
@@ -323,7 +329,7 @@ public class MainActivity extends AppCompatActivity {
                     //次日1-8点内随机时间开始执行
                     int randHourStart = ClutterUtils.getRandomInt(1,8);
                     countFlag =0;
-                    while (randHourStart != sCalendar.get(Calendar.HOUR_OF_DAY)) {
+                    while (randHourStart != Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
                         countFlag++;
                         myPrompt(randHourStart+"点开始执行"+ countFlag);
                         Thread.sleep(3000);
@@ -354,6 +360,10 @@ public class MainActivity extends AppCompatActivity {
         do {
             myPrompt("等待进入网页" + " " + count);
             webview = ClutterUtils.isTopActivity(getApplicationContext(), "ui.tools.WebViewUI");
+            if (count>60) {
+                myPrompt("打开网页失败");
+                return false;
+            }
             Thread.sleep(1000);
             count++;
         } while (!webview);
@@ -374,6 +384,10 @@ public class MainActivity extends AppCompatActivity {
         count = 1;
         do {
             myPrompt("等待页面加载完成" + " " + count);
+            if (count>60) {
+                myPrompt("网页加载超时");
+                return false;
+            }
             progress = MyAbService.findByDesc(getApplicationContext(), "progressBar");
             Thread.sleep(1000);
             count++;

@@ -656,11 +656,12 @@ public class MyAbService extends AccessibilityService {
                         while (node != null) {
                             if (node.isClickable()) {
                                 int left = 0,right= 0,top=0,bottom=0;
-                                Rect rect = new Rect(left,right,top,bottom);
+                                Rect rect = new Rect(left,top,right,bottom);
                                 node.getBoundsInScreen(rect);
-                                int tapX = rect.left+(rect.right-rect.left)/2;
-                                int tapY = rect.top+(rect.bottom-rect.top)/2;
+                                int tapX = ClutterUtils.getRandomInt(rect.left+42,rect.right-42);
+                                int tapY = ClutterUtils.getRandomInt(rect.top+42,rect.bottom-42);
                                 ClutterUtils.tap(tapX,tapY);
+                                node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                                 return true;
                             }
                             node = node.getParent();
@@ -677,12 +678,18 @@ public class MyAbService extends AccessibilityService {
         if (myrootNode == null) {
             return false;
         }
-        List<AccessibilityNodeInfo> nodeList = getNodes_noThrows(context, myrootNode);
+        List<AccessibilityNodeInfo> nodeList = getNodes(context, myrootNode);
         if (nodeList != null) {
             for (AccessibilityNodeInfo node : nodeList) {
                 if (node != null && node.getText() != null && node.getText().toString().equals(text)) {
                     while (node != null) {
                         if (node.isClickable()) {
+                            int left = 0,right= 0,top=0,bottom=0;
+                            Rect rect = new Rect(left,top,right,bottom);
+                            node.getBoundsInScreen(rect);
+                            int tapX = ClutterUtils.getRandomInt(rect.left+42,rect.right-42);
+                            int tapY = ClutterUtils.getRandomInt(rect.top+42,rect.bottom-42);
+                            ClutterUtils.tap(tapX,tapY);
                             node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                             return true;
                         }
@@ -885,11 +892,40 @@ public class MyAbService extends AccessibilityService {
             AccessibilityNodeInfo nodeInfo = nodeInfoList.get(nodeInfoList.size()-1);
             if (nodeInfo.isClickable()) {
                 int left = 0,right= 0,top=0,bottom=0;
-                Rect rect = new Rect(left,right,top,bottom);
+                Rect rect = new Rect(left,top,right,bottom);
                 nodeInfo.getBoundsInScreen(rect);
-                int tapX = ClutterUtils.getRandomInt(rect.left+66,rect.left+300);
-                int tapY = ClutterUtils.getRandomInt(rect.top+40,rect.top+70);
+                int tapX = ClutterUtils.getRandomInt(rect.left+42,rect.right-42);
+                int tapY = ClutterUtils.getRandomInt(rect.top+42,rect.top-42);
                 ClutterUtils.tap(tapX,tapY);
+                nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 点击最后一条微信聊天记录
+     * @param context
+     * @param className
+     * @return
+     */
+    public static Boolean clickChatLinkByclassName(Context context,String className) {
+        List<AccessibilityNodeInfo> nodeInfoList =  getAllNodeInfoByClassName(context, className);
+        if (nodeInfoList.size() > 0) {
+            AccessibilityNodeInfo nodeInfo = nodeInfoList.get(nodeInfoList.size()-1);
+            if (nodeInfo.isClickable()) {
+                int left = 0,right= 0,top=0,bottom=0;
+                Rect rect = new Rect(left,top,right,bottom);
+                nodeInfo.getBoundsInScreen(rect);
+                int tapX = ClutterUtils.getRandomInt(rect.left+42,rect.right-136);
+                int tapY = ClutterUtils.getRandomInt(rect.top+33,rect.top-33);
+                //不能点击空隙
+                while (tapY>tapY+50 && tapY<tapY+77) {
+                    tapY = ClutterUtils.getRandomInt(rect.top+33,rect.top-33);
+                }
+                ClutterUtils.tap(tapX,tapY);
+                nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                 return true;
             }
         }
